@@ -9,26 +9,42 @@
 
 # Keycloak Admin CLI documentation is available here: https://www.keycloak.org/docs/latest/server_admin/index.html
 
+
+# Clients names/IDs start with the app name followed by the instance name
+# Groups names start with instance name followed by the group name
+
 #Loading .env variables
 set -o allexport
-source $(dirname "$0")/.env
+source $(dirname "$0")/2.env
 set +o allexport
 
 # Adding Kecloak Path to the path during this session
+# export PATH=$PATH:/opt/keycloak/bin
 export PATH=$PATH:$keycloak_path
 
 # Config credentials to connect to the keycloak instance
+# /opt/keycloak/bin/kcadm.sh config credentials --server "http://localhost:53531" --realm master --user "admin" --password "admin"
 kcadm.sh config credentials --server "$keycloak_url" \
   --realm master --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD"
 
-# Deleting the realm
-if [ $delete_realm = "true" ]; then
-  echo "Deleting realm '$REALM'"
-  kcadm.sh delete realms/$REALM
+# Check if the realm exists already and delete if requiried
+# /opt/keycloak/bin/kcadm.sh get realms/Humanitarians --fields id,realm,enabled #--format csv
+# realm_check=$(kcadm.sh get realms/Humanitarians --fields id,realm,enabled)
+realm_check=$(kcadm.sh get realms/$REALM --fields id,realm,enabled)
+# echo $realm_check
+if [ -z "$realm_check" ]; then
+  echo "Realm '$REALM' does not exist"
 else
-  echo "Not deleting realm!"
+  echo "Realm '$REALM' already exists"
+  # Deleting the realm
+  if [ $delete_realm = "true" ]; then
+    echo "Deleting realm '$REALM'"
+    # kcadm.sh delete realms/Humanitarians
+    kcadm.sh delete realms/$REALM
+  else
+    echo "Not deleting realm!"
+  fi
 fi
-
 
 # Create the realm
 if [ $create_realm = "true" ]; then
@@ -53,10 +69,10 @@ else
 fi
 
 # Create Client
-echo "Creating client '$client_id'"
+echo "Creating client for app '$app_name' instance '$instance'"
 CID=$(kcadm.sh create clients \
   -r $REALM \
-  -s clientId=$client_id \
+  -s clientId=$app_name"_"$instance \
   -s enabled=true \
   -s publicClient=false \
   -s 'redirectUris=["'$client_redirect_uris'"]' \
@@ -75,12 +91,12 @@ kcadm.sh create clients/$CID/client-secret -r $REALM
 # Update the secret for the sake of not needing to change the FJ config. to be removed for PROD
 kcadm.sh update clients/$CID -s "secret=$client_secret" -r $REALM
 
-echo "Client '$client_id' with ID: '$CID' Created"
+echo "Client '$app_name"_"$instance' with ID: '$CID' Created"
 
 # Create Group
-echo "Creating Group '$group_name'"
-GROUP_ID=$(kcadm.sh create groups -r $REALM -s name=$group_name -i)
-echo "Group '$group_name' with ID: '$GROUP_ID' Created"
+echo "Creating Group '$group_name' for app '$app_name' instance '$instance'"
+GROUP_ID=$(kcadm.sh create groups -r $REALM -s name=$instance"_"$group_name -i)
+echo "Group '$instance"_"$group_name' with ID: '$GROUP_ID' Created"
 
 # Add Attribute to group
 kcadm.sh update groups/$GROUP_ID -s 'attributes.'$group_attribute_key'=["'$group_attribute_value'"]' -r $REALM
@@ -107,7 +123,7 @@ echo "Listing all users in Realm '$REALM' before adding to groups/roles"
 kcadm.sh get users -r $REALM --offset 0 --limit 5
 
 # Add user1 to Group $group_name
-echo "Adding user $user1 ($user1_id) to group $group_name ($GROUP_ID)"
+echo "Adding user $user1 ($user1_id) to group $instance"_"$group_name ($GROUP_ID)"
 kcadm.sh update users/$user1_id/groups/$GROUP_ID -r $REALM -s realm=$REALM -s userId=$user1_id -s groupId=$GROUP_ID -n
 
 # Check group membership of users after adding groups/roles
@@ -155,7 +171,7 @@ kcadm.sh create client-scopes/$client_scope_id/protocol-mappers/models \
               }'
 
 # Add Client to client Scopes
-echo "Adding Scope $client_scope ($client_scope_id) to client $client_id ($CID)"
+echo "Adding Scope $client_scope ($client_scope_id) to client $app_name"_"$instance ($CID)"
 kcadm.sh update clients/$CID/default-client-scopes/$client_scope_id  -r $REALM
 
 

@@ -1,3 +1,5 @@
 forgejo/forgejo/
 forgejo/postgres/
 keycloak/postgres/
+2nd instance/forgejo/
+2nd instance/postgres/
