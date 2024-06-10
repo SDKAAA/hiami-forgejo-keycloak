@@ -28,7 +28,7 @@ services:
       - FORGEJO__server__DOMAIN=${FORGEJO_DOMAIN}
       - FORGEJO__server__HTTP_PORT=${FORGEJO_INTERNAL_HTTP_PORT}
       - FORGEJO__server__SSH_PORT=${FORGEJO_EXTERNAL_SSH_PORT}
-      - FORGEJO__service__REQUIRE_SIGNIN_VIEW=false
+      - FORGEJO__service__REQUIRE_SIGNIN_VIEW=true
       - APP_NAME=${FORGEJO_APP_NAME}
       - FORGEJO__oauth2_client__ENABLE_AUTO_REGISTRATION=true
       - FORGEJO__oauth2_client__ACCOUNT_LINKING=auto
@@ -50,6 +50,9 @@ services:
       - FORGEJO__log__LEVEL=${FORGEJO_LOG_LEVEL}
       - FORGEJO__log__MODE=${FORGEJO_LOG_MODE}
       - FORGEJO__log__logger.access.MODE=${FORGEJO_LOG_MODE}
+      - FORGEJO__security__INSTALL_LOCK=${FORGEJO_INSTALL_LOCK}
+      - FORGEJO__picture__DISABLE_GRAVATAR=${FORGEJO_DISABLE_GRAVATAR} # causing a bug
+      - FORGEJO__service__DEFAULT_KEEP_EMAIL_PRIVATE=${FORGEJO_DEFAULT_KEEP_EMAIL_PRIVATE}
 
     restart: unless-stopped
     networks:
@@ -66,8 +69,8 @@ services:
       - psqldb
 
   psqldb:
-    image: postgres:16
-    restart: always
+    image: postgres:16.3
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
