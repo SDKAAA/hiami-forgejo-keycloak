@@ -137,7 +137,7 @@ Hereafter KC refers to Keycloak and FJ to Forgejo.
 That's it!
 <br>user1 can now sign in and get access to FJ while user2 can sign in but will receive an error.
 
-.
+
 
 *Full Authorization still needs to be investigated:*
 
